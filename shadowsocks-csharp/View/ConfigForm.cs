@@ -42,11 +42,11 @@ namespace Shadowsocks.View
         {
             AddButton.Text = I18N.GetString("&Add");
             DeleteButton.Text = I18N.GetString("&Delete");
-            IPLabel.Text = I18N.GetString("Server IP");
+            IPLabel.Text = I18N.GetString("Server Address");
             ServerPortLabel.Text = I18N.GetString("Server Port");
             PasswordLabel.Text = I18N.GetString("Password");
-            EncryptionLabel.Text = I18N.GetString("Encryption");
-            ProxyPortLabel.Text = I18N.GetString("Proxy Port");
+            EncryptionLabel.Text = I18N.GetString("Encryption Method");
+            ProxyPortLabel.Text = I18N.GetString("Local Port");
             RemarksLabel.Text = I18N.GetString("Remarks");
             ServerGroupBox.Text = I18N.GetString("Server");
             OKButton.Text = I18N.GetString("OK");
