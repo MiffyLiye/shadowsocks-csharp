@@ -109,7 +109,7 @@ namespace Shadowsocks.View
             string text = I18N.GetString("Shadowsocks") + " " + UpdateChecker.Version + "\n" +
                 (enabled ?
                     I18N.GetString("System Proxy On: ") + (global ? I18N.GetString("Global") : I18N.GetString("PAC")) :
-                    String.Format(I18N.GetString("Local Port {0}"), config.localPort))  // this feedback is very important because they need to know Shadowsocks is running
+                    String.Format(I18N.GetString("Local Port: {0}"), config.localPort))  // this feedback is very important because they need to know Shadowsocks is running
                 + "\n" + config.GetCurrentServer().FriendlyName();
             _notifyIcon.Text = text.Substring(0, Math.Min(63, text.Length));
         }
