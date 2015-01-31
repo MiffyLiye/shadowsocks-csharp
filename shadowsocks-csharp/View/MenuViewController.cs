@@ -102,19 +102,7 @@ namespace Shadowsocks.View
             Configuration config = controller.GetConfiguration();
             bool enabled = config.enabled;
             bool global = config.global;
-            if (!enabled)
-            {
-                Bitmap iconCopy = new Bitmap(icon);
-                for (int x = 0; x < iconCopy.Width; x++)
-                {
-                    for (int y = 0; y < iconCopy.Height; y++)
-                    {
-                        Color color = icon.GetPixel(x, y);
-                        iconCopy.SetPixel(x, y, Color.FromArgb((byte)(color.A / 1.25), color.R, color.G, color.B));
-                    }
-                }
-                icon = iconCopy;
-            }
+            
             _notifyIcon.Icon = Icon.FromHandle(icon.GetHicon());
 
             // we want to show more details but notify icon title is limited to 63 characters
