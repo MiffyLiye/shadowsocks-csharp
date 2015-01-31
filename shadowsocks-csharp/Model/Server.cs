@@ -30,7 +30,7 @@ namespace Shadowsocks.Model
             }
             else
             {
-                return server + ":" + server_port + "(" + remarks + ")";
+                return server + ":" + server_port;
             }
         }
 
