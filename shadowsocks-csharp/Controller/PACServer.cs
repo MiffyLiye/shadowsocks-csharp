@@ -16,6 +16,8 @@ namespace Shadowsocks.Controller
     {
         public static string PAC_FILE = "pac.txt";
 
+        public static string USER_RULE_FILE = "user-rule.txt";
+
         FileSystemWatcher watcher;
         private Configuration _config;
 
@@ -91,6 +93,19 @@ namespace Shadowsocks.Controller
             {
                 FileManager.UncompressFile(PAC_FILE, Resources.proxy_pac_txt);
                 return PAC_FILE;
+            }
+        }
+
+        internal string TouchUserRuleFile()
+        {
+            if (File.Exists(USER_RULE_FILE))
+            {
+                return USER_RULE_FILE;
+            }
+            else
+            {
+                File.WriteAllText(USER_RULE_FILE, Resources.user_rule);
+                return USER_RULE_FILE;
             }
         }
 

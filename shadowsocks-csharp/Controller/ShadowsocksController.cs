@@ -38,6 +38,7 @@ namespace Shadowsocks.Controller
         
         // when user clicked Edit PAC, and PAC file has already created
         public event EventHandler<PathEventArgs> PACFileReadyToOpen;
+        public event EventHandler<PathEventArgs> UserRuleFileReadyToOpen;
 
         public event EventHandler<GFWListUpdater.ResultEventArgs> UpdatePACFromGFWListCompleted;
 
@@ -166,6 +167,15 @@ namespace Shadowsocks.Controller
             }
         }
 
+        public void TouchUserRuleFile()
+        {
+            string userRuleFilename = _pacServer.TouchUserRuleFile();
+            if (UserRuleFileReadyToOpen != null)
+            {
+                UserRuleFileReadyToOpen(this, new PathEventArgs() { Path = userRuleFilename });
+            }
+        }
+
         public string GetQRCodeForCurrentServer()
         {
             Server server = GetCurrentServer();
@@ -179,6 +189,28 @@ namespace Shadowsocks.Controller
             if (gfwListUpdater != null)
             {
                 gfwListUpdater.UpdatePACFromGFWList(_config);
+            }
+        }
+
+        public void SavePACUrl(string pacUrl)
+        {
+            _config.pacUrl = pacUrl;
+            UpdateSystemProxy();
+            SaveConfig(_config);
+            if (ConfigChanged != null)
+            {
+                ConfigChanged(this, new EventArgs());
+            }
+        }
+
+        public void UseOnlinePAC(bool useOnlinePac)
+        {
+            _config.useOnlinePac = useOnlinePac;
+            UpdateSystemProxy();
+            SaveConfig(_config);
+            if (ConfigChanged != null)
+            {
+                ConfigChanged(this, new EventArgs());
             }
         }
 
