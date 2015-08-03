@@ -71,9 +71,9 @@ namespace Shadowsocks.View
 
             LoadCurrentConfiguration();
 
-            updateChecker.CheckUpdate(controller.GetConfiguration());
+            updateChecker.CheckUpdate(controller.GetConfigurationCopy());
 
-            if (controller.GetConfiguration().isDefault)
+            if (controller.GetConfigurationCopy().isDefault)
             {
                 _isFirstRun = true;
                 ShowConfigForm();
@@ -106,18 +106,28 @@ namespace Shadowsocks.View
             {
                 icon = Resources.ss24;
             }
-            Configuration config = controller.GetConfiguration();
+            Configuration config = controller.GetConfigurationCopy();
             bool enabled = config.enabled;
             bool global = config.global;
             
             _notifyIcon.Icon = Icon.FromHandle(icon.GetHicon());
 
+            string serverInfo = null;
+            if (controller.GetCurrentStrategy() != null)
+            {
+                serverInfo = controller.GetCurrentStrategy().Name;
+            }
+            else
+            {
+                serverInfo = config.GetCurrentServer().FriendlyName();
+            }
             // we want to show more details but notify icon title is limited to 63 characters
             string text = I18N.GetString("Shadowsocks") + " " + UpdateChecker.Version + "\n" +
                 (enabled ?
                     I18N.GetString("System Proxy On: ") + (global ? I18N.GetString("Global") : I18N.GetString("PAC")) :
                     String.Format(I18N.GetString("Local Port: {0}"), config.localPort))  // this feedback is very important because they need to know Shadowsocks is running
                 + "\n" + config.GetCurrentServer().FriendlyName();
+
             _notifyIcon.Text = text.Substring(0, Math.Min(63, text.Length));
         }
 
@@ -173,18 +183,18 @@ namespace Shadowsocks.View
 
         private void controller_EnableStatusChanged(object sender, EventArgs e)
         {
-            enableItem.Checked = controller.GetConfiguration().enabled;
+            enableItem.Checked = controller.GetConfigurationCopy().enabled;
             modeItem.Enabled = enableItem.Checked;
         }
 
         void controller_ShareOverLANStatusChanged(object sender, EventArgs e)
         {
-            ShareOverLANItem.Checked = controller.GetConfiguration().shareOverLan;
+            ShareOverLANItem.Checked = controller.GetConfigurationCopy().shareOverLan;
         }
 
         void controller_EnableGlobalChanged(object sender, EventArgs e)
         {
-            globalModeItem.Checked = controller.GetConfiguration().global;
+            globalModeItem.Checked = controller.GetConfigurationCopy().global;
             PACModeItem.Checked = !globalModeItem.Checked;
         }
 
@@ -231,7 +241,7 @@ namespace Shadowsocks.View
 
         private void LoadCurrentConfiguration()
         {
-            Configuration config = controller.GetConfiguration();
+            Configuration config = controller.GetConfigurationCopy();
             UpdateServersMenu();
             enableItem.Checked = config.enabled;
             modeItem.Enabled = config.enabled;
@@ -251,20 +261,33 @@ namespace Shadowsocks.View
             {
                 items.RemoveAt(0);
             }
-
-            Configuration configuration = controller.GetConfiguration();
-            for (int i = 0; i < configuration.configs.Count; i++)
+            int i = 0;
+            foreach (var strategy in controller.GetStrategies())
             {
-                Server server = configuration.configs[i];
+                MenuItem item = new MenuItem(strategy.Name);
+                item.Tag = strategy.ID;
+                item.Click += AStrategyItem_Click;
+                items.Add(i, item);
+                i++;
+            }
+            int strategyCount = i;
+            Configuration configuration = controller.GetConfigurationCopy();
+            foreach (var server in configuration.configs)
+            {
                 MenuItem item = new MenuItem(server.FriendlyName());
-                item.Tag = i;
+                item.Tag = i - strategyCount;
                 item.Click += AServerItem_Click;
                 items.Add(i, item);
+                i++;
             }
 
-            if (configuration.index >= 0 && configuration.index < configuration.configs.Count)
+            foreach (MenuItem item in items)
             {
-                items[configuration.index].Checked = true;
+                if (item.Tag != null && (item.Tag.ToString() == configuration.index.ToString() || item.Tag.ToString() == configuration.strategy))
+                {
+                    item.Checked = true;
+                }
+
             }
         }
 
@@ -366,6 +389,12 @@ namespace Shadowsocks.View
         {
             MenuItem item = (MenuItem)sender;
             controller.SelectServerIndex((int)item.Tag);
+        }
+
+        private void AStrategyItem_Click(object sender, EventArgs e)
+        {
+            MenuItem item = (MenuItem)sender;
+            controller.SelectStrategy((string)item.Tag);
         }
 
         private void ShowLogItem_Click(object sender, EventArgs e)
@@ -499,11 +528,11 @@ namespace Shadowsocks.View
         {
             if (!onlinePACItem.Checked)
             {
-                if (String.IsNullOrEmpty(controller.GetConfiguration().pacUrl))
+                if (String.IsNullOrEmpty(controller.GetConfigurationCopy().pacUrl))
                 {
                     UpdateOnlinePACURLItem_Click(sender, e);
                 }
-                if (!String.IsNullOrEmpty(controller.GetConfiguration().pacUrl))
+                if (!String.IsNullOrEmpty(controller.GetConfigurationCopy().pacUrl))
                 {
                     localPACItem.Checked = false;
                     onlinePACItem.Checked = true;
@@ -515,7 +544,7 @@ namespace Shadowsocks.View
 
         private void UpdateOnlinePACURLItem_Click(object sender, EventArgs e)
         {
-            string origPacUrl = controller.GetConfiguration().pacUrl;
+            string origPacUrl = controller.GetConfigurationCopy().pacUrl;
             string pacUrl = Microsoft.VisualBasic.Interaction.InputBox(
                 I18N.GetString("Please input PAC Url"),
                 I18N.GetString("Edit Online PAC URL"),

@@ -84,7 +84,7 @@ namespace Shadowsocks.View
                 };
                 int localPort = int.Parse(ProxyPortTextBox.Text);
                 Configuration.CheckServer(server);
-                Configuration.CheckPort(localPort);
+                Configuration.CheckLocalPort(localPort);
                 _modifiedConfiguration.configs[_oldSelectedIndex] = server;
                 _modifiedConfiguration.localPort = localPort;
                 
@@ -133,10 +133,14 @@ namespace Shadowsocks.View
 
         private void LoadCurrentConfiguration()
         {
-            _modifiedConfiguration = controller.GetConfiguration();
+            _modifiedConfiguration = controller.GetConfigurationCopy();
             LoadConfiguration(_modifiedConfiguration);
             _oldSelectedIndex = _modifiedConfiguration.index;
-            ServersListBox.SelectedIndex = _modifiedConfiguration.index;
+            if (_oldSelectedIndex < 0)
+            {
+                _oldSelectedIndex = 0;
+            }
+            ServersListBox.SelectedIndex = _oldSelectedIndex;
             LoadSelectedServer();
         }
 

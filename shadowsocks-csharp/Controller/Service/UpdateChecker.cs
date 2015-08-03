@@ -18,7 +18,7 @@ namespace Shadowsocks.Controller
         public string LatestVersionURL;
         public event EventHandler NewVersionFound;
 
-        public const string Version = "2.4";
+        public const string Version = "2.5.1";
 
         public void CheckUpdate(Configuration config)
         {
@@ -154,7 +154,7 @@ namespace Shadowsocks.Controller
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Logging.Debug(ex.ToString());
                 return;
             }
         }

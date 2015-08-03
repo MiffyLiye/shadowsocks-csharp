@@ -5,16 +5,18 @@ using System.Net.Sockets;
 using System.Net;
 using Shadowsocks.Encryption;
 using Shadowsocks.Model;
+using Shadowsocks.Controller.Strategy;
+using System.Timers;
 
 namespace Shadowsocks.Controller
 {
 
     class TCPRelay : Listener.Service
     {
-        private Configuration _config;
-        public TCPRelay(Configuration config)
+        private ShadowsocksController _controller;
+        public TCPRelay(ShadowsocksController controller)
         {
-            this._config = config;
+            this._controller = controller;
         }
 
         public bool Handle(byte[] firstPacket, int length, Socket socket, object state)
@@ -30,9 +32,7 @@ namespace Shadowsocks.Controller
             socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
             Handler handler = new Handler();
             handler.connection = socket;
-            Server server = _config.GetCurrentServer();
-            handler.encryptor = EncryptorFactory.GetEncryptor(server.method, server.password);
-            handler.server = server;
+            handler.controller = _controller;
 
             handler.Start(firstPacket, length);
             return true;
@@ -47,6 +47,9 @@ namespace Shadowsocks.Controller
         // Client  socket.
         public Socket remote;
         public Socket connection;
+        public ShadowsocksController controller;
+        private int retryCount = 0;
+        private bool connected;
 
         private byte command;
         private byte[] _firstPacket;
@@ -54,6 +57,10 @@ namespace Shadowsocks.Controller
         // Size of receive buffer.
         public const int RecvSize = 16384;
         public const int BufferSize = RecvSize + 32;
+
+        private int totalRead = 0;
+        private int totalWrite = 0;
+
         // remote receive buffer
         private byte[] remoteRecvBuffer = new byte[RecvSize];
         // remote send buffer
@@ -70,6 +77,19 @@ namespace Shadowsocks.Controller
         
         private object encryptionLock = new object();
         private object decryptionLock = new object();
+
+        private DateTime _startConnectTime;
+
+        public void CreateRemote()
+        {
+            Server server = controller.GetAServer(IStrategyCallerType.TCP, (IPEndPoint)connection.RemoteEndPoint);
+            if (server == null || server.server == "")
+            {
+                throw new ArgumentException("No server configured");
+            }
+            this.encryptor = EncryptorFactory.GetEncryptor(server.method, server.password);
+            this.server = server;
+        }
 
         public void Start(byte[] firstPacket, int length)
         {
@@ -115,7 +135,7 @@ namespace Shadowsocks.Controller
                     remote.Shutdown(SocketShutdown.Both);
                     remote.Close();
                 }
-                catch (SocketException e)
+                catch (Exception e)
                 {
                     Logging.LogUsefulException(e);
                 }
@@ -124,7 +144,10 @@ namespace Shadowsocks.Controller
             {
                 lock (decryptionLock)
                 {
-                    ((IDisposable)encryptor).Dispose();
+                    if (encryptor != null)
+                    {
+                        ((IDisposable)encryptor).Dispose();
+                    }
                 }
             }
         }
@@ -206,7 +229,7 @@ namespace Shadowsocks.Controller
                     if (command == 1)
                     {
                         byte[] response = { 5, 0, 0, 1, 0, 0, 0, 0, 0, 0 };
-                        connection.BeginSend(response, 0, response.Length, 0, new AsyncCallback(StartConnect), null);
+                        connection.BeginSend(response, 0, response.Length, 0, new AsyncCallback(ResponseCallback), null);
                     }
                     else if (command == 3)
                     {
@@ -283,11 +306,36 @@ namespace Shadowsocks.Controller
             }
         }
 
-        private void StartConnect(IAsyncResult ar)
+        private void ResponseCallback(IAsyncResult ar)
         {
             try
             {
                 connection.EndSend(ar);
+
+                StartConnect();
+            }
+
+            catch (Exception e)
+            {
+                Logging.LogUsefulException(e);
+                this.Close();
+            }
+        }
+
+        private class ServerTimer : Timer
+        {
+            public Server Server;
+
+            public ServerTimer(int p) :base(p)
+            {
+            }
+        }
+
+        private void StartConnect()
+        {
+            try
+            {
+                CreateRemote();
 
                 // TODO async resolving
                 IPAddress ipAddress;
@@ -304,9 +352,17 @@ namespace Shadowsocks.Controller
                     SocketType.Stream, ProtocolType.Tcp);
                 remote.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
 
+                _startConnectTime = DateTime.Now;
+                ServerTimer connectTimer = new ServerTimer(3000);
+                connectTimer.AutoReset = false;
+                connectTimer.Elapsed += connectTimer_Elapsed;
+                connectTimer.Enabled = true;
+                connectTimer.Server = server;
+
+                connected = false;
                 // Connect to the remote endpoint.
                 remote.BeginConnect(remoteEP,
-                    new AsyncCallback(ConnectCallback), null);
+                    new AsyncCallback(ConnectCallback), connectTimer);
             }
             catch (Exception e)
             {
@@ -315,26 +371,84 @@ namespace Shadowsocks.Controller
             }
         }
 
+        private void connectTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            if (connected)
+            {
+                return;
+            }
+            Server server = ((ServerTimer)sender).Server;
+            IStrategy strategy = controller.GetCurrentStrategy();
+            if (strategy != null)
+            {
+                strategy.SetFailure(server);
+            }
+            Console.WriteLine(String.Format("{0} timed out", server.FriendlyName()));
+            remote.Close();
+            RetryConnect();
+        }
+
+        private void RetryConnect()
+        {
+            if (retryCount < 4)
+            {
+                Logging.Debug("Connection failed, retrying");
+                StartConnect();
+                retryCount++;
+            }
+            else
+            {
+                this.Close();
+            }
+        }
+
         private void ConnectCallback(IAsyncResult ar)
         {
+            Server server = null;
             if (closed)
             {
                 return;
             }
             try
             {
+                ServerTimer timer = (ServerTimer)ar.AsyncState;
+                server = timer.Server;
+                timer.Elapsed -= connectTimer_Elapsed;
+                timer.Enabled = false;
+                timer.Dispose();
+
                 // Complete the connection.
                 remote.EndConnect(ar);
+
+                connected = true;
 
                 //Console.WriteLine("Socket connected to {0}",
                 //    remote.RemoteEndPoint.ToString());
 
+                var latency = DateTime.Now - _startConnectTime;
+                IStrategy strategy = controller.GetCurrentStrategy();
+                if (strategy != null)
+                {
+                    strategy.UpdateLatency(server, latency);
+                }
+
                 StartPipe();
+            }
+            catch (ArgumentException e)
+            {
             }
             catch (Exception e)
             {
+                if (server != null)
+                {
+                    IStrategy strategy = controller.GetCurrentStrategy();
+                    if (strategy != null)
+                    {
+                        strategy.SetFailure(server);
+                    }
+                }
                 Logging.LogUsefulException(e);
-                this.Close();
+                RetryConnect();
             }
         }
 
@@ -367,6 +481,7 @@ namespace Shadowsocks.Controller
             try
             {
                 int bytesRead = remote.EndReceive(ar);
+                totalRead += bytesRead;
 
                 if (bytesRead > 0)
                 {
@@ -380,6 +495,12 @@ namespace Shadowsocks.Controller
                         encryptor.Decrypt(remoteRecvBuffer, bytesRead, remoteSendBuffer, out bytesToSend);
                     }
                     connection.BeginSend(remoteSendBuffer, 0, bytesToSend, 0, new AsyncCallback(PipeConnectionSendCallback), null);
+
+                    IStrategy strategy = controller.GetCurrentStrategy();
+                    if (strategy != null)
+                    {
+                        strategy.UpdateLastRead(this.server);
+                    }
                 }
                 else
                 {
@@ -387,6 +508,13 @@ namespace Shadowsocks.Controller
                     connection.Shutdown(SocketShutdown.Send);
                     connectionShutdown = true;
                     CheckClose();
+
+                    if (totalRead == 0)
+                    {
+                        // closed before anything received, reports as failure
+                        // disable this feature
+                        // controller.GetCurrentStrategy().SetFailure(this.server);
+                    }
                 }
             }
             catch (Exception e)
@@ -405,6 +533,7 @@ namespace Shadowsocks.Controller
             try
             {
                 int bytesRead = connection.EndReceive(ar);
+                totalWrite += bytesRead;
 
                 if (bytesRead > 0)
                 {
@@ -418,6 +547,13 @@ namespace Shadowsocks.Controller
                         encryptor.Encrypt(connetionRecvBuffer, bytesRead, connetionSendBuffer, out bytesToSend);
                     }
                     remote.BeginSend(connetionSendBuffer, 0, bytesToSend, 0, new AsyncCallback(PipeRemoteSendCallback), null);
+
+
+                    IStrategy strategy = controller.GetCurrentStrategy();
+                    if (strategy != null)
+                    {
+                        strategy.UpdateLastWrite(this.server);
+                    }
                 }
                 else
                 {
