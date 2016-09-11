@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
+using Shadowsocks.Util;
 
 namespace Shadowsocks.Controller
 {
@@ -15,7 +14,7 @@ namespace Shadowsocks.Controller
             this._targetPort = targetPort;
         }
 
-        public bool Handle(byte[] firstPacket, int length, Socket socket, object state)
+        public override bool Handle(byte[] firstPacket, int length, Socket socket, object state)
         {
             if (socket.ProtocolType != ProtocolType.Tcp)
             {
@@ -47,19 +46,10 @@ namespace Shadowsocks.Controller
                 this._local = socket;
                 try
                 {
-                    // TODO async resolving
-                    IPAddress ipAddress;
-                    bool parsed = IPAddress.TryParse("127.0.0.1", out ipAddress);
-                    IPEndPoint remoteEP = new IPEndPoint(ipAddress, targetPort);
-
-
-                    _remote = new Socket(ipAddress.AddressFamily,
-                        SocketType.Stream, ProtocolType.Tcp);
-                    _remote.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
+                    EndPoint remoteEP = SocketUtil.GetEndPoint("localhost", targetPort);
 
                     // Connect to the remote endpoint.
-                    _remote.BeginConnect(remoteEP,
-                        new AsyncCallback(ConnectCallback), null);
+                    SocketUtil.BeginConnectTcp(remoteEP, ConnectCallback, null);
                 }
                 catch (Exception e)
                 {
@@ -76,7 +66,7 @@ namespace Shadowsocks.Controller
                 }
                 try
                 {
-                    _remote.EndConnect(ar);
+                    _remote = SocketUtil.EndConnectTcp(ar);
                     HandshakeReceive();
                 }
                 catch (Exception e)
@@ -102,7 +92,6 @@ namespace Shadowsocks.Controller
                     this.Close();
                 }
             }
-
 
             private void StartPipe(IAsyncResult ar)
             {
@@ -141,7 +130,6 @@ namespace Shadowsocks.Controller
                     }
                     else
                     {
-                        //Console.WriteLine("bytesRead: " + bytesRead.ToString());
                         _local.Shutdown(SocketShutdown.Send);
                         _localShutdown = true;
                         CheckClose();

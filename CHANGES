@@ -1,6 +1,68 @@
+3.3 2016-09-09
+- Update Privoxy to 3.0.26
+- Change minimum system version explicitly to Windows Vista
+  since we are using dual-mode socket
+- Support running multiple instances of Privoxy for system proxy
+- Improve networking
+- New traffic chart and icon style
+- I18N: Traditional Chinese support
+- Bug fixes and improvements
+
+3.2 2016-08-13
+- Add AES-CTR, blowfish and camellia ciphers support,
+  including aes-256-ctr, aes-192-ctr, aes-128-ctr,
+  bf-cfb, camellia-128-cfb, camellia-192-cfb
+  and camellia-256-cfb.
+- Support one-time authentication in ss urls for sharing
+- Support traffic chart and traffic icon
+- Add proxy support
+- Add verbose logging
+- Improve LogForm
+- Delete log file when clicking "Clean Logs" in the LogForm
+- Bug fixes and improvements
+
+3.1 2016-05-01
+- Disable StatisticsStrategy by default
+
+3.0 2016-03-02
+- Update Privoxy to 3.0.24
+- Replace Choose by Total Packet Loss with Choose by Statistics
+- Support chacha20-ietf
+- Support Onetime Authentication
+- Optional checking updates
+- Download updates automatically
+- Improve log viewer
+- Minor fixes
+- Other improvements
+
+2.5.8 2015-09-20
+- Update GFWList url
+
+2.5.7 2015-09-19
+- Fix repeated IV
+
+2.5.6 2015-08-19
+- Add portable mode. Create shadowsocks_portable_mode.txt to use it
+- Support server reorder
+
+2.5.5 2015-08-17
+- Fix crash when enabling Availability Statistics and some servers can not be resolved
+- Allow multiple instances
+- Other fixes
+
+2.5.4 2015-08-16
+- Hide Privoxy icon
+
+2.5.3 2015-08-16
+- Replace Polipo with Privoxy
+- Add Choose by Total Packet Loss
+
+2.5.2 2015-08-04
+- Add log viewer
+
 2.5.1 2015-07-26
 - Prevent HA from switching servers too frequently
-- Fix a problem that server settings can not be updated when using HA
+- Fix server settings can not be updated when using HA
 - Fix server port can't be 8123
 - Other minor fixes
 
