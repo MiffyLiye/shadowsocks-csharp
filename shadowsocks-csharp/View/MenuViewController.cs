@@ -251,7 +251,7 @@ namespace Shadowsocks.View
                     this.editGFWUserRuleItem = CreateMenuItem("Edit User Rule for GFWList...", new EventHandler(this.EditUserRuleFileForGFWListItem_Click)),
                     this.editOnlinePACItem = CreateMenuItem("Edit Online PAC URL...", new EventHandler(this.UpdateOnlinePACURLItem_Click)),
                 }),
-                this.proxyItem = CreateMenuItem("SOCKS5 Proxy...", new EventHandler(this.proxyItem_Click)),
+                this.proxyItem = CreateMenuItem("Forward Proxy...", new EventHandler(this.proxyItem_Click)),
                 new MenuItem("-"),
                 this.AutoStartupItem = CreateMenuItem("Start on Boot", new EventHandler(this.AutoStartupItem_Click)),
                 this.ShareOverLANItem = CreateMenuItem("Allow Clients from LAN", new EventHandler(this.ShareOverLANItem_Click)),
@@ -481,12 +481,14 @@ namespace Shadowsocks.View
 
         void logForm_FormClosed(object sender, FormClosedEventArgs e)
         {
+            logForm.Dispose();
             logForm = null;
             Utils.ReleaseMemory(true);
         }
 
         void configForm_FormClosed(object sender, FormClosedEventArgs e)
         {
+            configForm.Dispose();
             configForm = null;
             Utils.ReleaseMemory(true);
             if (_isFirstRun)
@@ -499,12 +501,14 @@ namespace Shadowsocks.View
 
         void proxyForm_FormClosed(object sender, FormClosedEventArgs e)
         {
+            proxyForm.Dispose();
             proxyForm = null;
             Utils.ReleaseMemory(true);
         }
 
         void hotkeySettingsForm_FormClosed(object sender, FormClosedEventArgs e)
         {
+            hotkeySettingsForm.Dispose();
             hotkeySettingsForm = null;
             Utils.ReleaseMemory(true);
         }
@@ -544,11 +548,7 @@ namespace Shadowsocks.View
 
         private void notifyIcon1_Click(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
-            {
-                // TODO: show something interesting
-            }
-            else if (e.Button == MouseButtons.Middle)
+            if ( e.Button == MouseButtons.Middle )
             {
                 ShowLogForm();
             }
