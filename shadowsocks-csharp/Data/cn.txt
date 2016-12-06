@@ -27,6 +27,7 @@ Verbose Logging=详细记录日志
 Updates...=更新...
 Check for Updates...=检查更新
 Check for Updates at Startup=启动时检查更新
+Check Pre-release Version=检查测试版更新
 Edit Hotkeys...=编辑快捷键...
 About...=关于...
 Quit=退出
@@ -91,8 +92,7 @@ Please input PAC Url=请输入 PAC 网址
 # HotkeySettings Form
 
 Switch system proxy=切换系统代理状态
-Switch to PAC mode=切换到PAC模式
-Switch to Global mode=切换到全局模式
+Switch system proxy mode=切换系统代理模式
 Switch share over LAN=切换局域网共享
 Show Logs=显示日志
 Switch to prev server=切换上个服务器

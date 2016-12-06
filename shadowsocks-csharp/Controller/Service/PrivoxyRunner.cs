@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
@@ -41,17 +42,10 @@ namespace Shadowsocks.Controller
             }
         }
 
-        public int RunningPort
-        {
-            get
-            {
-                return _runningPort;
-            }
-        }
+        public int RunningPort => _runningPort;
 
         public void Start(Configuration configuration)
         {
-            Server server = configuration.GetCurrentServer();
             if (_process == null)
             {
                 Process[] existingPrivoxy = Process.GetProcessesByName("ss_privoxy");
@@ -90,6 +84,7 @@ namespace Shadowsocks.Controller
             if (_process != null)
             {
                 KillProcess(_process);
+                _process.Dispose();
                 _process = null;
             }
             RefreshTrayArea();
@@ -125,43 +120,32 @@ namespace Shadowsocks.Controller
 
         private static bool IsChildProcess(Process process)
         {
-            if (Utils.IsPortableMode())
+            try
             {
-                /*
-                 * Under PortableMode, we could identify it by the path of ss_privoxy.exe.
-                 */
-                try
+                if (Utils.IsPortableMode())
                 {
                     /*
-                     * Sometimes Process.GetProcessesByName will return some processes that
-                     * are already dead, and that will cause exceptions here.
-                     * We could simply ignore those exceptions.
+                     * Under PortableMode, we could identify it by the path of ss_privoxy.exe.
                      */
-                    string path = process.MainModule.FileName;
+                    var path = process.MainModule.FileName;
+
                     return Utils.GetTempPath("ss_privoxy.exe").Equals(path);
                 }
-                catch (Exception ex)
-                {
-                    Logging.LogUsefulException(ex);
-                    return false;
-                }
-            }
-            else
-            {
-                try
+                else
                 {
                     var cmd = process.GetCommandLine();
 
                     return cmd.Contains(UniqueConfigFile);
                 }
-                catch (Win32Exception ex)
-                {
-                    if ((uint) ex.ErrorCode != 0x80004005)
-                    {
-                        throw;
-                    }
-                }
-
+            }
+            catch (Exception ex)
+            {
+                /*
+                 * Sometimes Process.GetProcessesByName will return some processes that
+                 * are already dead, and that will cause exceptions here.
+                 * We could simply ignore those exceptions.
+                 */
+                Logging.LogUsefulException(ex);
                 return false;
             }
         }
@@ -171,21 +155,12 @@ namespace Shadowsocks.Controller
             int defaultPort = 8123;
             try
             {
-                IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
-                IPEndPoint[] tcpEndPoints = properties.GetActiveTcpListeners();
-
-                List<int> usedPorts = new List<int>();
-                foreach (IPEndPoint endPoint in IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners())
-                {
-                    usedPorts.Add(endPoint.Port);
-                }
-                for (int port = defaultPort; port <= 65535; port++)
-                {
-                    if (!usedPorts.Contains(port))
-                    {
-                        return port;
-                    }
-                }
+                // TCP stack please do me a favor
+                TcpListener l = new TcpListener(IPAddress.Loopback, 0);
+                l.Start();
+                var port = ((IPEndPoint)l.LocalEndpoint).Port;
+                l.Stop();
+                return port;
             }
             catch (Exception e)
             {
@@ -193,7 +168,6 @@ namespace Shadowsocks.Controller
                 Logging.LogUsefulException(e);
                 return defaultPort;
             }
-            throw new Exception("No free port found.");
         }
 
         [StructLayout(LayoutKind.Sequential)]
