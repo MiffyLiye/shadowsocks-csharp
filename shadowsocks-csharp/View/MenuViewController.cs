@@ -47,6 +47,7 @@ namespace Shadowsocks.View
         private MenuItem updateFromGFWListItem;
         private MenuItem editGFWUserRuleItem;
         private MenuItem editOnlinePACItem;
+        private MenuItem secureLocalPacUrlToggleItem;
         private MenuItem autoCheckUpdatesToggleItem;
         private MenuItem checkPreReleaseToggleItem;
         private MenuItem proxyItem;
@@ -240,8 +241,10 @@ namespace Shadowsocks.View
                     this.SeperatorItem = new MenuItem("-"),
                     this.ConfigItem = CreateMenuItem("Edit Servers...", new EventHandler(this.Config_Click)),
                     CreateMenuItem("Statistics Config...", StatisticsConfigItem_Click),
-                    CreateMenuItem("Show QRCode...", new EventHandler(this.QRCodeItem_Click)),
-                    CreateMenuItem("Scan QRCode from Screen...", new EventHandler(this.ScanQRCodeItem_Click))
+                    new MenuItem("-"),
+                    CreateMenuItem("Share Server Config...", new EventHandler(this.QRCodeItem_Click)),
+                    CreateMenuItem("Scan QRCode from Screen...", new EventHandler(this.ScanQRCodeItem_Click)),
+                    CreateMenuItem("Import URL from Clipboard...", new EventHandler(this.ImportURLItem_Click))
                 }),
                 CreateMenuGroup("PAC ", new MenuItem[] {
                     this.localPACItem = CreateMenuItem("Local PAC", new EventHandler(this.LocalPACItem_Click)),
@@ -250,6 +253,8 @@ namespace Shadowsocks.View
                     this.editLocalPACItem = CreateMenuItem("Edit Local PAC File...", new EventHandler(this.EditPACFileItem_Click)),
                     this.updateFromGFWListItem = CreateMenuItem("Update Local PAC from GFWList", new EventHandler(this.UpdatePACFromGFWListItem_Click)),
                     this.editGFWUserRuleItem = CreateMenuItem("Edit User Rule for GFWList...", new EventHandler(this.EditUserRuleFileForGFWListItem_Click)),
+                    this.secureLocalPacUrlToggleItem = CreateMenuItem("Secure Local PAC", new EventHandler(this.SecureLocalPacUrlToggleItem_Click)),
+                    CreateMenuItem("Copy Local PAC URL", new EventHandler(this.CopyLocalPacUrlItem_Click)),
                     this.editOnlinePACItem = CreateMenuItem("Edit Online PAC URL...", new EventHandler(this.UpdateOnlinePACURLItem_Click)),
                 }),
                 this.proxyItem = CreateMenuItem("Forward Proxy...", new EventHandler(this.proxyItem_Click)),
@@ -377,6 +382,7 @@ namespace Shadowsocks.View
             AutoStartupItem.Checked = AutoStartup.Check();
             onlinePACItem.Checked = onlinePACItem.Enabled && config.useOnlinePac;
             localPACItem.Checked = !onlinePACItem.Checked;
+            secureLocalPacUrlToggleItem.Checked = config.secureLocalPac;
             UpdatePACItemsEnabledStatus();
             UpdateUpdateMenu();
         }
@@ -715,6 +721,15 @@ namespace Shadowsocks.View
             MessageBox.Show(I18N.GetString("No QRCode found. Try to zoom in or move it to the center of the screen."));
         }
 
+        private void ImportURLItem_Click(object sender, EventArgs e)
+        {
+            var success = controller.AddServerBySSURL(Clipboard.GetText(TextDataFormat.Text));
+            if (success)
+            {
+                ShowConfigForm();
+            }
+        }
+
         void splash_FormClosed(object sender, FormClosedEventArgs e)
         {
             ShowConfigForm();
@@ -776,6 +791,17 @@ namespace Shadowsocks.View
             }
         }
 
+        private void SecureLocalPacUrlToggleItem_Click(object sender, EventArgs e)
+        {
+            Configuration configuration = controller.GetConfigurationCopy();
+            controller.ToggleSecureLocalPac(!configuration.secureLocalPac);
+        }
+
+        private void CopyLocalPacUrlItem_Click(object sender, EventArgs e)
+        {
+            controller.CopyPacUrl();
+        }
+
         private void UpdatePACItemsEnabledStatus()
         {
             if (this.localPACItem.Checked)
@@ -793,6 +819,7 @@ namespace Shadowsocks.View
                 this.editOnlinePACItem.Enabled = true;
             }
         }
+
 
         private void UpdateUpdateMenu()
         {
