@@ -89,11 +89,6 @@ if you want to deactivate all, please clear all textboxes.
 
 Please visit [Servers] for more information.
 
-#### Portable Mode
-
-If you want to put all temporary files into shadowsocks/temp folder instead of
-system temp folder, create a `shadowsocks_portable_mode.txt` into shadowsocks folder.
-
 #### Develop
 
 [Visual Studio 2015] & [.NET Framework 4.6.2 Developer Pack] are required.
@@ -101,7 +96,6 @@ system temp folder, create a `shadowsocks_portable_mode.txt` into shadowsocks fo
 #### License
 
 GPLv3
-
 
 [Appveyor]:       https://ci.appveyor.com/project/MiffyLiye/shadowsocks-csharp
 [Build Status]:   https://ci.appveyor.com/api/projects/status/u3tnd9xwv0a756re?svg=true
