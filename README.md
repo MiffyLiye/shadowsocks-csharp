@@ -13,6 +13,7 @@ Shadowsocks for Windows
 4. Supports HTTP proxy
 5. Supports server auto switching
 6. Supports UDP relay (see Usage)
+7. Supports plugins
 
 #### Download
 
@@ -20,7 +21,7 @@ Download the [latest release].
 
 #### Requirements
 
-Microsoft [.NET Framework 4.6.2] or higher. 
+Microsoft [.NET Framework 4.6.2] or higher.
 
 #### Basic
 
@@ -58,11 +59,17 @@ If you want to manage multiple servers using other tools like SwitchyOmega,
 you can start multiple Shadowsocks instances. To avoid configuration conflicts,
 copy Shadowsocks to a new directory and choose a different local port.
 
+#### Plugins
+
+If you would like to connect to server via a plugin, please set the plugin's
+path (relative or absolute) on Edit Servers form.
+Note: Forward Proxy will not be used while a plugin is enabled.
+
 #### Global hotkeys
 
 Hotkeys are NOT registered automatically. You should re-register all hotkeys after
 restarting Shadowsocks. If you are using multiple instances of Shadowsocks,
-you must set different key combination for other instances.
+you must set different key combination for each instance.
 
 ##### How to input?
 
